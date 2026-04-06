@@ -372,7 +372,7 @@ if not defined ADAPTER (
 echo  Adapter: %ADAPTER%
 netsh interface ip set dns name="%ADAPTER%" static 1.1.1.1 primary >nul 2>&1
 netsh interface ip add dns name="%ADAPTER%" 1.0.0.1 index=2 >nul 2>&1
-netsh interface ipv6 set dnsservers "%ADAPTER%" static ::1 primary >nul 2>&1
+netsh interface ipv6 set dnsservers "%ADAPTER%" static 2606:4700:4700::1111 primary >nul 2>&1
 ipconfig /flushdns >nul 2>&1
 echo.
 echo  %C_GREEN%✓ DNS set to Cloudflare 1.1.1.1 / 1.0.0.1%C_RESET%
