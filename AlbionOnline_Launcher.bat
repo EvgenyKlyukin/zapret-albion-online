@@ -336,23 +336,39 @@ exit /b
 
 :: ============================================================================
 :DIAG
+set "DIAGFILE=%ROOT%lists\diagnostics.log"
 echo.
 echo  %C_CYAN%── Network Diagnostics ──%C_RESET%
+echo  %C_YELLOW%  Saving to: lists\diagnostics.log%C_RESET%
 echo.
+echo ========== %DATE% %TIME% ========== > "%DIAGFILE%"
+
 echo  %C_YELLOW%[DNS] loginserver.live.albion.zone%C_RESET%
-nslookup loginserver.live.albion.zone 1.1.1.1 2>nul | findstr /i "Address"
-echo.
+echo [DNS] loginserver.live.albion.zone >> "%DIAGFILE%"
+nslookup loginserver.live.albion.zone 1.1.1.1 2>nul | findstr /i "Address" | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%DIAGFILE%' -Append"
+echo. & echo. >> "%DIAGFILE%"
+
 echo  %C_YELLOW%[DNS] live.albiononline.com%C_RESET%
-nslookup live.albiononline.com 1.1.1.1 2>nul | findstr /i "Address"
-echo.
+echo [DNS] live.albiononline.com >> "%DIAGFILE%"
+nslookup live.albiononline.com 1.1.1.1 2>nul | findstr /i "Address" | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%DIAGFILE%' -Append"
+echo. & echo. >> "%DIAGFILE%"
+
 echo  %C_YELLOW%[PING] albiononline.com%C_RESET%
-ping -n 4 albiononline.com
-echo.
+echo [PING] albiononline.com >> "%DIAGFILE%"
+ping -n 4 albiononline.com | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%DIAGFILE%' -Append"
+echo. & echo. >> "%DIAGFILE%"
+
 echo  %C_YELLOW%[TRACERT] loginserver.live.albion.zone (Ctrl+C to abort)%C_RESET%
-tracert -d -w 2000 loginserver.live.albion.zone
-echo.
+echo [TRACERT] loginserver.live.albion.zone >> "%DIAGFILE%"
+tracert -d -w 2000 loginserver.live.albion.zone | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%DIAGFILE%' -Append"
+echo. & echo. >> "%DIAGFILE%"
+
 echo  %C_YELLOW%[DNS] Current DNS servers%C_RESET%
-ipconfig /all | findstr /i "DNS"
+echo [DNS] Current DNS servers >> "%DIAGFILE%"
+ipconfig /all | findstr /i "DNS" | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%DIAGFILE%' -Append"
+
+echo.
+echo  %C_GREEN%✓ Saved to: lists\diagnostics.log%C_RESET%
 echo.
 pause
 goto MENU
