@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create ZIP archive
+        run: |
+          zip -r zapret-albion-online.zip . \
+            --exclude "*.git*" \
+            --exclude "*.github*" \
+            --exclude "lists/albion-hosts.txt" \
+            --exclude "lists/settings.ini" \
+            --exclude ".claude/*"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: zapret-albion-online.zip
+          generate_release_notes: true
