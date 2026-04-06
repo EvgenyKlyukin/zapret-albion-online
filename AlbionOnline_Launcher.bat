@@ -11,6 +11,7 @@ set "ROOT=%~dp0"
 set "WINWS=%ROOT%bin\winws.exe"
 set "HOSTLIST=%ROOT%lists\albion-hosts.txt"
 set "SETTINGS=%ROOT%lists\settings.ini"
+set "LOGFILE=%ROOT%lists\winws.log"
 
 :: --- Colors ---
 for /f %%a in ('echo prompt $E^| cmd /q') do set "ESC=%%a"
@@ -63,13 +64,17 @@ echo gcorelabs.com
 echo gcore.com
 ) > "%HOSTLIST%"
 
-:: --- Load last choice ---
+:: --- Load settings ---
 set "LAST="
+set "LOG_ENABLED=0"
 if exist "%SETTINGS%" (
-    for /f "tokens=2 delims==" %%a in ('findstr /i "last_strategy" "%SETTINGS%"') do set "LAST=%%a"
+    for /f "usebackq tokens=1,2 delims==" %%a in ("%SETTINGS%") do (
+        if /i "%%a"=="last_strategy" if not "%%b"=="" set "LAST=%%b"
+        if /i "%%a"=="log_enabled"   if not "%%b"=="" set "LOG_ENABLED=%%b"
+    )
 )
 
-:: --- Menu ---
+:: ============================================================================
 :MENU
 cls
 echo.
@@ -77,40 +82,52 @@ echo  %C_CYAN%╔═════════════════════
 echo  %C_CYAN%║        ALBION ONLINE — DPI BYPASS TOOL          ║%C_RESET%
 echo  %C_CYAN%╚══════════════════════════════════════════════════╝%C_RESET%
 echo.
-if defined LAST (
-    echo  %C_YELLOW% Last run: strategy %LAST%%C_RESET%
-    echo.
+set "STATUS="
+if defined LAST set "STATUS=!C_YELLOW!Last: strategy !LAST!!C_RESET!   "
+if "!LOG_ENABLED!"=="1" (
+    set "STATUS=!STATUS!!C_GREEN![LOG: ON]!C_RESET!"
+) else (
+    set "STATUS=!STATUS!!C_YELLOW![LOG: OFF]!C_RESET!"
 )
-echo  %C_GREEN% [A]%C_RESET%  Auto-select strategy
-echo       Tests each strategy and picks the one that works
+echo   !STATUS!
 echo.
-echo  %C_GREEN% [1]%C_RESET%  Soft            (fake + split2)
-echo       Start here. Works for most ISPs
+echo  %C_GREEN% [A]%C_RESET%  Auto-select strategy  (tests all 1-9)
 echo.
-echo  %C_GREEN% [2]%C_RESET%  Medium          (fake + multidisorder)
-echo       If strategy 1 doesn't help
+echo  %C_CYAN%  -- Universal --%C_RESET%
+echo  %C_GREEN% [1]%C_RESET%  Soft        fake + split2             most ISPs
+echo  %C_GREEN% [2]%C_RESET%  Medium      fake + multidisorder
+echo  %C_GREEN% [3]%C_RESET%  Aggressive  multisplit + seqovl       heavy DPI
+echo  %C_GREEN% [4]%C_RESET%  Full bypass all HTTPS, no domain filter
 echo.
-echo  %C_GREEN% [3]%C_RESET%  Aggressive      (multisplit + seqovl)
-echo       Heavy filtering (Rostelecom-like DPI)
+echo  %C_CYAN%  -- ISP-specific --%C_RESET%
+echo  %C_GREEN% [5]%C_RESET%  Beeline     disorder2 + md5sig
+echo  %C_GREEN% [6]%C_RESET%  MTS         split2 + datanoack
+echo  %C_GREEN% [7]%C_RESET%  Megafon     multidisorder + datanoack
+echo  %C_GREEN% [8]%C_RESET%  TTK         multisplit + seqovl4
+echo  %C_GREEN% [9]%C_RESET%  Maximum     all HTTPS, disorder2, max repeats
 echo.
-echo  %C_GREEN% [4]%C_RESET%  Full bypass     (all HTTPS, no domain filter)
-echo       Last resort. May slow down other sites
-echo.
-echo  %C_YELLOW% [5]%C_RESET%  Diagnostics     (tracert + nslookup)
-echo  %C_YELLOW% [6]%C_RESET%  Configure DNS   (Cloudflare 1.1.1.1)
+echo  %C_YELLOW% [D]%C_RESET%  Diagnostics   (tracert + nslookup)
+echo  %C_YELLOW% [N]%C_RESET%  Configure DNS (Cloudflare 1.1.1.1)
+echo  %C_YELLOW% [L]%C_RESET%  Toggle logging  (lists\winws.log)
 echo.
 echo  %C_RED% [0]%C_RESET%  Exit
 echo.
 set /p "CHOICE=  Choice: "
 
 if /i "%CHOICE%"=="A" goto AUTO
-if "%CHOICE%"=="1" goto STRATEGY1
-if "%CHOICE%"=="2" goto STRATEGY2
-if "%CHOICE%"=="3" goto STRATEGY3
-if "%CHOICE%"=="4" goto STRATEGY4
-if "%CHOICE%"=="5" goto DIAG
-if "%CHOICE%"=="6" goto DNS
-if "%CHOICE%"=="0" goto EXIT
+if  "%CHOICE%"=="1"  goto STRATEGY1
+if  "%CHOICE%"=="2"  goto STRATEGY2
+if  "%CHOICE%"=="3"  goto STRATEGY3
+if  "%CHOICE%"=="4"  goto STRATEGY4
+if  "%CHOICE%"=="5"  goto STRATEGY5
+if  "%CHOICE%"=="6"  goto STRATEGY6
+if  "%CHOICE%"=="7"  goto STRATEGY7
+if  "%CHOICE%"=="8"  goto STRATEGY8
+if  "%CHOICE%"=="9"  goto STRATEGY9
+if /i "%CHOICE%"=="D" goto DIAG
+if /i "%CHOICE%"=="N" goto DNS
+if /i "%CHOICE%"=="L" goto TOGGLE_LOG
+if  "%CHOICE%"=="0"  goto EXIT
 echo  %C_RED% Invalid choice.%C_RESET%
 timeout /t 1 >nul
 goto MENU
@@ -124,19 +141,18 @@ echo.
 echo  %C_CYAN%── Auto-select strategy ──%C_RESET%
 echo.
 echo  Testing connection to %TEST_HOST%:%TEST_PORT%
-echo  Timeout per attempt: 8 seconds
+echo  Strategies 1-9, timeout 8s each
 echo.
 
-:: Stop winws if already running
 taskkill /f /im winws.exe >nul 2>&1
 timeout /t 1 >nul
 
 set "FOUND_STRATEGY="
 
-for %%S in (1 2 3 4) do (
+for %%S in (1 2 3 4 5 6 7 8 9) do (
     if not defined FOUND_STRATEGY (
-        echo  %C_YELLOW%[%%S/4]%C_RESET% Trying strategy %%S...
-        call :START_STRATEGY_BG %%S
+        echo  %C_YELLOW%[%%S/9]%C_RESET% Trying strategy %%S...
+        call :RUN_BG %%S
         timeout /t 3 >nul
 
         call :TEST_CONNECTION
@@ -154,11 +170,11 @@ for %%S in (1 2 3 4) do (
 echo.
 if defined FOUND_STRATEGY (
     echo  %C_GREEN%═══════════════════════════════════════%C_RESET%
-    echo  %C_GREEN%  Strategy %FOUND_STRATEGY% selected — winws is running%C_RESET%
+    echo  %C_GREEN%  Strategy !FOUND_STRATEGY! selected — winws is running%C_RESET%
     echo  %C_GREEN%═══════════════════════════════════════%C_RESET%
     echo.
     echo  Launch Albion Online. Keep this window open.
-    call :SAVE_LAST %FOUND_STRATEGY%
+    call :SAVE_LAST !FOUND_STRATEGY!
     echo.
     echo  %C_YELLOW%  Press any key to stop winws and return to menu%C_RESET%
     pause >nul
@@ -169,140 +185,154 @@ if defined FOUND_STRATEGY (
     echo  %C_RED%═══════════════════════════════════════%C_RESET%
     echo.
     echo  Recommendations:
-    echo  - Configure DNS via option [6]
-    echo  - Run diagnostics [5]
-    echo  - Try strategy [4] manually
+    echo  - Configure DNS via option [N]
+    echo  - Run diagnostics [D]
+    echo  - Try strategy [9] manually
 )
 echo.
 pause
 goto MENU
 
-:: --- Launch strategy in background ---
-:START_STRATEGY_BG
-if "%~1"=="1" (
-    start /b "" "%WINWS%" ^
-        --wf-l3=ipv4 --wf-tcp=80,443 ^
-        --filter-tcp=80 --hostlist="%HOSTLIST%" ^
-        --dpi-desync=fake,fakedsplit --dpi-desync-autottl=2 --dpi-desync-fooling=md5sig ^
-        --new ^
-        --filter-tcp=443 --hostlist="%HOSTLIST%" ^
-        --dpi-desync=fake,split2 --dpi-desync-autottl=2 --dpi-desync-fooling=md5sig ^
-        --dpi-desync-split-pos=1
-)
-if "%~1"=="2" (
-    start /b "" "%WINWS%" ^
-        --wf-l3=ipv4 --wf-tcp=80,443 ^
-        --filter-tcp=80 --hostlist="%HOSTLIST%" ^
-        --dpi-desync=fake,fakedsplit --dpi-desync-autottl=2 --dpi-desync-fooling=md5sig ^
-        --new ^
-        --filter-tcp=443 --hostlist="%HOSTLIST%" ^
-        --dpi-desync=fake,multidisorder --dpi-desync-split-pos=midsld ^
-        --dpi-desync-repeats=6 --dpi-desync-fooling=badseq,md5sig
-)
-if "%~1"=="3" (
-    start /b "" "%WINWS%" ^
-        --wf-l3=ipv4 --wf-tcp=80,443 ^
-        --filter-tcp=80 --hostlist="%HOSTLIST%" ^
-        --dpi-desync=fake,multisplit --dpi-desync-split-pos=1,method+1 ^
-        --dpi-desync-split-seqovl=2 --dpi-desync-fooling=md5sig ^
-        --new ^
-        --filter-tcp=443 --hostlist="%HOSTLIST%" ^
-        --dpi-desync=fake,multidisorder --dpi-desync-split-pos=1,midsld ^
-        --dpi-desync-repeats=11 --dpi-desync-fooling=badseq,md5sig ^
-        --dpi-desync-split-seqovl=1
-)
-if "%~1"=="4" (
-    start /b "" "%WINWS%" ^
-        --wf-l3=ipv4 --wf-tcp=80,443 ^
-        --filter-tcp=80 ^
-        --dpi-desync=fake,fakedsplit --dpi-desync-autottl=2 --dpi-desync-fooling=md5sig ^
-        --new ^
-        --filter-tcp=443 ^
-        --dpi-desync=fake,multidisorder --dpi-desync-split-pos=midsld ^
-        --dpi-desync-repeats=6 --dpi-desync-fooling=badseq,md5sig ^
-        --dpi-desync-any-protocol
+:: ============================================================================
+:: STRATEGY SECTIONS — each shows info, runs winws, waits for Ctrl+C
+:: ============================================================================
+:STRATEGY1
+call :SAVE_LAST 1
+echo.
+echo  %C_GREEN%► Strategy 1: Soft (fake + split2)%C_RESET%
+echo  %C_YELLOW%  Press Ctrl+C to stop%C_RESET%
+echo.
+call :RUN_FG 1
+goto END
+
+:STRATEGY2
+call :SAVE_LAST 2
+echo.
+echo  %C_GREEN%► Strategy 2: Medium (fake + multidisorder)%C_RESET%
+echo  %C_YELLOW%  Press Ctrl+C to stop%C_RESET%
+echo.
+call :RUN_FG 2
+goto END
+
+:STRATEGY3
+call :SAVE_LAST 3
+echo.
+echo  %C_GREEN%► Strategy 3: Aggressive (multisplit + seqovl)%C_RESET%
+echo  %C_YELLOW%  Press Ctrl+C to stop%C_RESET%
+echo.
+call :RUN_FG 3
+goto END
+
+:STRATEGY4
+call :SAVE_LAST 4
+echo.
+echo  %C_GREEN%► Strategy 4: Full bypass (all HTTPS)%C_RESET%
+echo  %C_RED%  WARNING: may slow down other sites%C_RESET%
+echo  %C_YELLOW%  Press Ctrl+C to stop%C_RESET%
+echo.
+call :RUN_FG 4
+goto END
+
+:STRATEGY5
+call :SAVE_LAST 5
+echo.
+echo  %C_GREEN%► Strategy 5: Beeline (disorder2 + md5sig)%C_RESET%
+echo  %C_YELLOW%  Press Ctrl+C to stop%C_RESET%
+echo.
+call :RUN_FG 5
+goto END
+
+:STRATEGY6
+call :SAVE_LAST 6
+echo.
+echo  %C_GREEN%► Strategy 6: MTS (split2 + datanoack)%C_RESET%
+echo  %C_YELLOW%  Press Ctrl+C to stop%C_RESET%
+echo.
+call :RUN_FG 6
+goto END
+
+:STRATEGY7
+call :SAVE_LAST 7
+echo.
+echo  %C_GREEN%► Strategy 7: Megafon (multidisorder + datanoack)%C_RESET%
+echo  %C_YELLOW%  Press Ctrl+C to stop%C_RESET%
+echo.
+call :RUN_FG 7
+goto END
+
+:STRATEGY8
+call :SAVE_LAST 8
+echo.
+echo  %C_GREEN%► Strategy 8: TTK (multisplit + seqovl4)%C_RESET%
+echo  %C_YELLOW%  Press Ctrl+C to stop%C_RESET%
+echo.
+call :RUN_FG 8
+goto END
+
+:STRATEGY9
+call :SAVE_LAST 9
+echo.
+echo  %C_GREEN%► Strategy 9: Maximum (all HTTPS, max params)%C_RESET%
+echo  %C_RED%  WARNING: affects all HTTPS traffic%C_RESET%
+echo  %C_YELLOW%  Press Ctrl+C to stop%C_RESET%
+echo.
+call :RUN_FG 9
+goto END
+
+:: ============================================================================
+:: WRITE_CMD — writes winws command for strategy %1 to %TEMP%\albion_run.bat
+:: All args on a single line so the file can be executed with optional redirect
+:: ============================================================================
+:WRITE_CMD
+if "%~1"=="1" echo "%WINWS%" --wf-l3=ipv4 --wf-tcp=80,443 --filter-tcp=80 --hostlist="%HOSTLIST%" --dpi-desync=fake,fakedsplit --dpi-desync-autottl=2 --dpi-desync-fooling=md5sig --new --filter-tcp=443 --hostlist="%HOSTLIST%" --dpi-desync=fake,split2 --dpi-desync-autottl=2 --dpi-desync-fooling=md5sig --dpi-desync-split-pos=1> "%TEMP%\albion_run.bat"
+if "%~1"=="2" echo "%WINWS%" --wf-l3=ipv4 --wf-tcp=80,443 --filter-tcp=80 --hostlist="%HOSTLIST%" --dpi-desync=fake,fakedsplit --dpi-desync-autottl=2 --dpi-desync-fooling=md5sig --new --filter-tcp=443 --hostlist="%HOSTLIST%" --dpi-desync=fake,multidisorder --dpi-desync-split-pos=midsld --dpi-desync-repeats=6 --dpi-desync-fooling=badseq,md5sig> "%TEMP%\albion_run.bat"
+if "%~1"=="3" echo "%WINWS%" --wf-l3=ipv4 --wf-tcp=80,443 --filter-tcp=80 --hostlist="%HOSTLIST%" --dpi-desync=fake,multisplit --dpi-desync-split-pos=1,method+1 --dpi-desync-split-seqovl=2 --dpi-desync-fooling=md5sig --new --filter-tcp=443 --hostlist="%HOSTLIST%" --dpi-desync=fake,multidisorder --dpi-desync-split-pos=1,midsld --dpi-desync-repeats=11 --dpi-desync-fooling=badseq,md5sig --dpi-desync-split-seqovl=1> "%TEMP%\albion_run.bat"
+if "%~1"=="4" echo "%WINWS%" --wf-l3=ipv4 --wf-tcp=80,443 --filter-tcp=80 --dpi-desync=fake,fakedsplit --dpi-desync-autottl=2 --dpi-desync-fooling=md5sig --new --filter-tcp=443 --dpi-desync=fake,multidisorder --dpi-desync-split-pos=midsld --dpi-desync-repeats=6 --dpi-desync-fooling=badseq,md5sig --dpi-desync-any-protocol> "%TEMP%\albion_run.bat"
+if "%~1"=="5" echo "%WINWS%" --wf-l3=ipv4 --wf-tcp=80,443 --filter-tcp=80 --hostlist="%HOSTLIST%" --dpi-desync=fake,disorder2 --dpi-desync-ttl=2 --dpi-desync-fooling=md5sig --new --filter-tcp=443 --hostlist="%HOSTLIST%" --dpi-desync=fake,disorder2 --dpi-desync-ttl=2 --dpi-desync-fooling=md5sig> "%TEMP%\albion_run.bat"
+if "%~1"=="6" echo "%WINWS%" --wf-l3=ipv4 --wf-tcp=80,443 --filter-tcp=80 --hostlist="%HOSTLIST%" --dpi-desync=fake,fakedsplit --dpi-desync-autottl=2 --dpi-desync-fooling=datanoack --new --filter-tcp=443 --hostlist="%HOSTLIST%" --dpi-desync=fake,split2 --dpi-desync-autottl=2 --dpi-desync-fooling=datanoack --dpi-desync-split-pos=1> "%TEMP%\albion_run.bat"
+if "%~1"=="7" echo "%WINWS%" --wf-l3=ipv4 --wf-tcp=80,443 --filter-tcp=80 --hostlist="%HOSTLIST%" --dpi-desync=fake,fakedsplit --dpi-desync-autottl=2 --dpi-desync-fooling=md5sig --new --filter-tcp=443 --hostlist="%HOSTLIST%" --dpi-desync=fake,multidisorder --dpi-desync-split-pos=1,midsld --dpi-desync-repeats=11 --dpi-desync-fooling=badseq,datanoack --dpi-desync-split-seqovl=1> "%TEMP%\albion_run.bat"
+if "%~1"=="8" echo "%WINWS%" --wf-l3=ipv4 --wf-tcp=80,443 --filter-tcp=80 --hostlist="%HOSTLIST%" --dpi-desync=fake,multisplit --dpi-desync-split-pos=1,method+1 --dpi-desync-split-seqovl=4 --dpi-desync-fooling=badseq --new --filter-tcp=443 --hostlist="%HOSTLIST%" --dpi-desync=fake,multisplit --dpi-desync-split-pos=1,midsld --dpi-desync-split-seqovl=4 --dpi-desync-fooling=badseq,md5sig> "%TEMP%\albion_run.bat"
+if "%~1"=="9" echo "%WINWS%" --wf-l3=ipv4 --wf-tcp=443 --filter-tcp=443 --dpi-desync=fake,disorder2 --dpi-desync-ttl=3 --dpi-desync-repeats=12 --dpi-desync-fooling=badseq,datanoack --dpi-desync-any-protocol> "%TEMP%\albion_run.bat"
+exit /b
+
+:: ============================================================================
+:: RUN_FG — run strategy %1 in foreground (blocks until Ctrl+C)
+:: ============================================================================
+:RUN_FG
+call :WRITE_CMD %~1
+if "!LOG_ENABLED!"=="1" (
+    echo  %C_YELLOW%[LOG] Writing to: %LOGFILE%%C_RESET%
+    echo.
+    echo ========== %DATE% %TIME% -- Strategy %~1 ========== >> "%LOGFILE%"
+    call "%TEMP%\albion_run.bat" >> "%LOGFILE%" 2>&1
+) else (
+    call "%TEMP%\albion_run.bat"
 )
 exit /b
 
-:: --- TLS connection test ---
+:: ============================================================================
+:: RUN_BG — run strategy %1 in background (returns immediately)
+:: ============================================================================
+:RUN_BG
+call :WRITE_CMD %~1
+if "!LOG_ENABLED!"=="1" (
+    echo ========== %DATE% %TIME% -- Strategy %~1 (bg) ========== >> "%LOGFILE%"
+    (echo call "%TEMP%\albion_run.bat" 1^>>"%LOGFILE%" 2^>&1) > "%TEMP%\albion_run_log.bat"
+    start /b "" "%TEMP%\albion_run_log.bat"
+) else (
+    start /b "" "%TEMP%\albion_run.bat"
+)
+exit /b
+
+:: ============================================================================
+:: TLS CONNECTION TEST
+:: ============================================================================
 :TEST_CONNECTION
 set "TEST_OK=0"
 powershell -NoProfile -NonInteractive -Command ^
     "try { $t = New-Object System.Net.Sockets.TcpClient; $r = $t.ConnectAsync('%TEST_HOST%', %TEST_PORT%); if ($r.Wait(8000) -and $t.Connected) { $s = $t.GetStream(); $ssl = New-Object System.Net.Security.SslStream($s, $false, {$true}); $ssl.AuthenticateAsClient('%TEST_HOST%', $null, 'Tls12', $false); if ($ssl.IsAuthenticated) { exit 0 } } exit 1 } catch { exit 1 }" >nul 2>&1
 if %errorlevel%==0 set "TEST_OK=1"
 exit /b
-
-:: ============================================================================
-:STRATEGY1
-call :SAVE_LAST 1
-echo.
-echo  %C_GREEN%► Strategy 1: fake + split2%C_RESET%
-echo  %C_YELLOW%  Press Ctrl+C to stop%C_RESET%
-echo.
-"%WINWS%" ^
-    --wf-l3=ipv4 --wf-tcp=80,443 ^
-    --filter-tcp=80 --hostlist="%HOSTLIST%" ^
-    --dpi-desync=fake,fakedsplit --dpi-desync-autottl=2 --dpi-desync-fooling=md5sig ^
-    --new ^
-    --filter-tcp=443 --hostlist="%HOSTLIST%" ^
-    --dpi-desync=fake,split2 --dpi-desync-autottl=2 --dpi-desync-fooling=md5sig ^
-    --dpi-desync-split-pos=1
-goto END
-
-:: ============================================================================
-:STRATEGY2
-call :SAVE_LAST 2
-echo.
-echo  %C_GREEN%► Strategy 2: fake + multidisorder%C_RESET%
-echo  %C_YELLOW%  Press Ctrl+C to stop%C_RESET%
-echo.
-"%WINWS%" ^
-    --wf-l3=ipv4 --wf-tcp=80,443 ^
-    --filter-tcp=80 --hostlist="%HOSTLIST%" ^
-    --dpi-desync=fake,fakedsplit --dpi-desync-autottl=2 --dpi-desync-fooling=md5sig ^
-    --new ^
-    --filter-tcp=443 --hostlist="%HOSTLIST%" ^
-    --dpi-desync=fake,multidisorder --dpi-desync-split-pos=midsld ^
-    --dpi-desync-repeats=6 --dpi-desync-fooling=badseq,md5sig
-goto END
-
-:: ============================================================================
-:STRATEGY3
-call :SAVE_LAST 3
-echo.
-echo  %C_GREEN%► Strategy 3: multisplit + seqovl%C_RESET%
-echo  %C_YELLOW%  Press Ctrl+C to stop%C_RESET%
-echo.
-"%WINWS%" ^
-    --wf-l3=ipv4 --wf-tcp=80,443 ^
-    --filter-tcp=80 --hostlist="%HOSTLIST%" ^
-    --dpi-desync=fake,multisplit --dpi-desync-split-pos=1,method+1 ^
-    --dpi-desync-split-seqovl=2 --dpi-desync-fooling=md5sig ^
-    --new ^
-    --filter-tcp=443 --hostlist="%HOSTLIST%" ^
-    --dpi-desync=fake,multidisorder --dpi-desync-split-pos=1,midsld ^
-    --dpi-desync-repeats=11 --dpi-desync-fooling=badseq,md5sig ^
-    --dpi-desync-split-seqovl=1
-goto END
-
-:: ============================================================================
-:STRATEGY4
-call :SAVE_LAST 4
-echo.
-echo  %C_GREEN%► Strategy 4: full bypass (all HTTPS)%C_RESET%
-echo  %C_RED%  WARNING: may slow down other sites%C_RESET%
-echo  %C_YELLOW%  Press Ctrl+C to stop%C_RESET%
-echo.
-"%WINWS%" ^
-    --wf-l3=ipv4 --wf-tcp=80,443 ^
-    --filter-tcp=80 ^
-    --dpi-desync=fake,fakedsplit --dpi-desync-autottl=2 --dpi-desync-fooling=md5sig ^
-    --new ^
-    --filter-tcp=443 ^
-    --dpi-desync=fake,multidisorder --dpi-desync-split-pos=midsld ^
-    --dpi-desync-repeats=6 --dpi-desync-fooling=badseq,md5sig ^
-    --dpi-desync-any-protocol
-goto END
 
 :: ============================================================================
 :DIAG
@@ -354,8 +384,32 @@ pause
 goto MENU
 
 :: ============================================================================
+:TOGGLE_LOG
+if "!LOG_ENABLED!"=="1" (
+    set "LOG_ENABLED=0"
+    echo.
+    echo  %C_YELLOW% Logging disabled%C_RESET%
+) else (
+    set "LOG_ENABLED=1"
+    echo.
+    echo  %C_GREEN% Logging enabled%C_RESET%
+    echo  %C_GREEN% Log file: %LOGFILE%%C_RESET%
+)
+call :SAVE_SETTINGS
+timeout /t 1 >nul
+goto MENU
+
+:: ============================================================================
 :SAVE_LAST
-echo last_strategy=%~1> "%SETTINGS%"
+set "LAST=%~1"
+call :SAVE_SETTINGS
+exit /b
+
+:SAVE_SETTINGS
+(
+echo last_strategy=!LAST!
+echo log_enabled=!LOG_ENABLED!
+) > "%SETTINGS%"
 exit /b
 
 :END
