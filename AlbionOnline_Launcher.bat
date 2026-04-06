@@ -345,27 +345,33 @@ echo ========== %DATE% %TIME% ========== > "%DIAGFILE%"
 
 echo  %C_YELLOW%[DNS] loginserver.live.albion.zone%C_RESET%
 echo [DNS] loginserver.live.albion.zone >> "%DIAGFILE%"
-nslookup loginserver.live.albion.zone 1.1.1.1 2>nul | findstr /i "Address" | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%DIAGFILE%' -Append"
+nslookup loginserver.live.albion.zone 1.1.1.1 2>nul | findstr /i "Address"
+nslookup loginserver.live.albion.zone 1.1.1.1 2>nul | findstr /i "Address" >> "%DIAGFILE%"
 echo. & echo. >> "%DIAGFILE%"
 
 echo  %C_YELLOW%[DNS] live.albiononline.com%C_RESET%
 echo [DNS] live.albiononline.com >> "%DIAGFILE%"
-nslookup live.albiononline.com 1.1.1.1 2>nul | findstr /i "Address" | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%DIAGFILE%' -Append"
+nslookup live.albiononline.com 1.1.1.1 2>nul | findstr /i "Address"
+nslookup live.albiononline.com 1.1.1.1 2>nul | findstr /i "Address" >> "%DIAGFILE%"
 echo. & echo. >> "%DIAGFILE%"
 
 echo  %C_YELLOW%[PING] albiononline.com%C_RESET%
 echo [PING] albiononline.com >> "%DIAGFILE%"
-ping -n 4 albiononline.com | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%DIAGFILE%' -Append"
+ping -n 4 albiononline.com
+ping -n 4 albiononline.com >> "%DIAGFILE%" 2>&1
 echo. & echo. >> "%DIAGFILE%"
 
 echo  %C_YELLOW%[TRACERT] loginserver.live.albion.zone (Ctrl+C to abort)%C_RESET%
 echo [TRACERT] loginserver.live.albion.zone >> "%DIAGFILE%"
-tracert -d -w 2000 loginserver.live.albion.zone | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%DIAGFILE%' -Append"
+tracert -d -w 2000 loginserver.live.albion.zone > "%TEMP%\albion_tracert.tmp" 2>&1
+type "%TEMP%\albion_tracert.tmp"
+type "%TEMP%\albion_tracert.tmp" >> "%DIAGFILE%"
 echo. & echo. >> "%DIAGFILE%"
 
 echo  %C_YELLOW%[DNS] Current DNS servers%C_RESET%
 echo [DNS] Current DNS servers >> "%DIAGFILE%"
-ipconfig /all | findstr /i "DNS" | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%DIAGFILE%' -Append"
+ipconfig /all | findstr /i "DNS"
+ipconfig /all | findstr /i "DNS" >> "%DIAGFILE%" 2>&1
 
 echo.
 echo  %C_GREEN%✓ Saved to: lists\diagnostics.log%C_RESET%
