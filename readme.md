@@ -1,69 +1,69 @@
 # zapret-albion-online
 
-Инструмент обхода блокировки DPI для **Albion Online** в России, основанный на [zapret](https://github.com/bol-van/zapret).
+DPI bypass tool for **Albion Online** in Russia, based on [zapret](https://github.com/bol-van/zapret).
 
-Поддерживает все серверы: Americas, Europe, Asia.
+Supports all game servers: Americas, Europe, Asia.
 
 ---
 
-## Требования
+## Requirements
 
 - Windows 7 x64 / Windows 10 / Windows 11
-- Права администратора
+- Administrator privileges
 
 ---
 
-## Быстрый старт
+## Quick Start
 
-1. Скачайте репозиторий (кнопка **Code → Download ZIP**) и распакуйте
-2. Правый клик на `AlbionOnline_Launcher.bat` → **Запуск от имени администратора**
-3. Выберите **[A] Автоматический выбор стратегии**
-4. Дождитесь результата и запускайте Albion Online — окно лаунчера держите открытым
-
----
-
-## Если [A] не помог
-
-1. Выберите **[6] Настроить DNS** — сменит DNS на Cloudflare 1.1.1.1
-2. Запустите **[A]** снова
+1. Download the repository (**Code → Download ZIP**) and extract it
+2. Right-click `AlbionOnline_Launcher.bat` → **Run as administrator**
+3. Select **[A] Auto-select strategy**
+4. Wait for the result, then launch Albion Online — keep the launcher window open
 
 ---
 
-## Меню
+## If [A] Didn't Help
 
-| Пункт | Описание |
-|-------|----------|
-| **[A]** | Автоматически тестирует стратегии 1→4 и выбирает рабочую |
-| **[1]** | Мягкая: fake + split2. Подходит для большинства провайдеров |
-| **[2]** | Средняя: fake + multidisorder |
-| **[3]** | Агрессивная: multisplit + seqovl. Для Ростелекома и аналогов |
-| **[4]** | Полный обход всего HTTPS. Крайний случай |
-| **[5]** | Диагностика: tracert + nslookup по серверам Albion |
-| **[6]** | Настройка DNS на Cloudflare 1.1.1.1 |
+1. Select **[6] Configure DNS** — switches DNS to Cloudflare 1.1.1.1
+2. Run **[A]** again
 
 ---
 
-## Антивирусы
+## Menu
 
-`WinDivert64.sys` может вызывать ложные срабатывания — это драйвер перехвата трафика, необходимый для работы zapret. Добавьте папку `bin\` в исключения антивируса. Оригинальные файлы можно сверить на [reqrypt.org](https://reqrypt.org/download).
+| Option | Description |
+|--------|-------------|
+| **[A]** | Automatically tests strategies 1→4 and picks the working one |
+| **[1]** | Soft: fake + split2. Works for most ISPs |
+| **[2]** | Medium: fake + multidisorder |
+| **[3]** | Aggressive: multisplit + seqovl. For Rostelecom-like DPI |
+| **[4]** | Full bypass of all HTTPS traffic. Last resort |
+| **[5]** | Diagnostics: tracert + nslookup to Albion servers |
+| **[6]** | Set DNS to Cloudflare 1.1.1.1 |
+
+---
+
+## Antivirus
+
+`WinDivert64.sys` may trigger false positives — it is a traffic interception driver required by zapret. Add the `bin\` folder to your antivirus exclusions. Original files can be verified at [reqrypt.org](https://reqrypt.org/download).
 
 ---
 
 ## ARM64 / Windows 7
 
-По умолчанию лаунчер работает на Windows 10/11 x64. Для особых конфигураций:
+By default the launcher works on Windows 10/11 x64. For special configurations:
 
-**ARM64** (Surface Pro X, ноутбуки на Snapdragon и других ARM-процессорах)
+**ARM64** (Surface Pro X, Snapdragon laptops, etc.)
 
-Стандартный драйвер `WinDivert64.sys` не загружается на ARM без режима тестовой подписи. Если winws не запускается — запустите `arm64\install_arm64.cmd` и перезагрузите систему. На рабочем столе появится надпись «Тестовый режим».
+The standard `WinDivert64.sys` driver cannot load on ARM without test signing mode. If winws fails to start — run `arm64\install_arm64.cmd` and reboot. A "Test Mode" watermark will appear on the desktop.
 
 **Windows 7**
 
-Используется другая версия WinDivert, несовместимая с Windows 7. Если драйвер не загружается — запустите `win7\install_win7.cmd`, он заменит файлы в `bin\` на совместимые. Либо установите ESU-обновления от Microsoft.
+A different version of WinDivert is required for Windows 7. If the driver fails to load — run `win7\install_win7.cmd`, which replaces files in `bin\` with compatible ones. Alternatively, install Microsoft ESU updates.
 
 ---
 
-## Ссылки
+## Links
 
-- [zapret](https://github.com/bol-van/zapret) — оригинальный проект
-- [zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle) — сборка для Windows
+- [zapret](https://github.com/bol-van/zapret) — original project
+- [zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle) — Windows build

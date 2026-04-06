@@ -1,32 +1,32 @@
 # Contributing
 
-## Сообщить о проблеме
+## Reporting an Issue
 
-Если стратегии не работают — создайте [Issue](../../issues) и укажите:
+If no strategy works for you, open an [Issue](../../issues) and include:
 
-- Провайдера
-- Версию Windows
-- Какие стратегии пробовали
-- Результат диагностики (пункт [5] в меню)
+- Your ISP (internet provider)
+- Windows version
+- Which strategies you tried
+- Diagnostics output (option [5] in the menu)
 
-## Предложить новую стратегию
+## Suggesting a New Strategy
 
-Если нашли параметры winws которые помогают — создайте Issue или Pull Request с описанием:
-- Параметры запуска winws
-- Провайдер на котором проверяли
-- Чем отличается от существующих стратегий
+If you found winws parameters that work — open an Issue or Pull Request with:
+- The winws launch parameters
+- The ISP you tested on
+- How it differs from existing strategies
 
-## Обновить список доменов
+## Updating the Domain List
 
-Если появились новые домены Albion Online — создайте Issue или PR с изменением в `AlbionOnline_Launcher.bat` (секция "Создаём список доменов").
+If new Albion Online domains appear — open an Issue or PR with changes to `AlbionOnline_Launcher.bat` (the "domain list" section).
 
-## Pull Request
+## Pull Requests
 
-1. Форкните репозиторий
-2. Создайте ветку: `git checkout -b fix/название`
-3. Внесите изменения
-4. Создайте PR с описанием что и зачем изменено
+1. Fork the repository
+2. Create a branch: `git checkout -b fix/description`
+3. Make your changes
+4. Open a PR with a description of what and why you changed
 
-## Нашли рабочую стратегию для своего провайдера?
+## Found a Working Strategy for Your ISP?
 
-Поделитесь в Issues — добавим в документацию.
+Share it in Issues — we'll add it to the documentation.

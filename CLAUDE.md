@@ -1,72 +1,74 @@
-# Инструкции для Claude — zapret-albion-online
+# Claude Instructions — zapret-albion-online
 
-## Контекст проекта
+## Project Context
 
-Инструмент обхода блокировки DPI для **Albion Online** в России. Основан на форке [bol-van/zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle). Целевая аудитория — обычные пользователи, не технические специалисты.
+A DPI bypass tool for **Albion Online** in Russia, based on a fork of [bol-van/zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle). Target audience: regular users, not technical specialists.
 
 ---
 
-## Структура репозитория
+## Repository Structure
 
 ```
 zapret-albion-online/
-├── AlbionOnline_Launcher.bat   — единственный лаунчер, точка входа для пользователя
-├── readme.md                   — документация на русском + краткий EN-блок
-├── CONTRIBUTING.md             — инструкции по контрибьюшену
-├── bin/                        — бинари zapret (не редактировать вручную)
-│   ├── winws.exe               — основной инструмент обхода DPI
-│   ├── WinDivert.dll           — библиотека драйвера
-│   ├── WinDivert64.sys         — драйвер ядра Windows
-│   └── cygwin1.dll             — runtime для winws.exe
-├── lists/                      — генерируется при запуске, в git не попадает
-│   ├── albion-hosts.txt        — список доменов (создаётся лаунчером)
-│   └── settings.ini            — авто-сохранение последней стратегии
-├── arm64/                      — файлы для Windows ARM64
-└── win7/                       — файлы для Windows 7
+├── AlbionOnline_Launcher.bat   — single launcher, user entry point
+├── readme.md                   — documentation
+├── CONTRIBUTING.md             — contribution guidelines
+├── bin/                        — zapret binaries (do not edit manually)
+│   ├── winws.exe               — main DPI bypass tool
+│   ├── WinDivert.dll           — driver library
+│   ├── WinDivert64.sys         — Windows kernel driver
+│   └── cygwin1.dll             — runtime for winws.exe
+├── lists/                      — generated at runtime, excluded from git
+│   ├── albion-hosts.txt        — domain list (created by launcher)
+│   └── settings.ini            — auto-saved last strategy choice
+├── arm64/                      — files for Windows ARM64
+└── win7/                       — files for Windows 7
 ```
 
 ---
 
-## Как работает лаунчер
+## How the Launcher Works
 
-`AlbionOnline_Launcher.bat` — интерактивное меню с ANSI-цветами (Windows 10+):
+`AlbionOnline_Launcher.bat` — interactive menu with ANSI colors (Windows 10+):
 
-- **[A]** Автовыбор: запускает winws в фоне (`start /b`), тестирует TLS-соединение до `loginserver.live.albion.zone:443` через PowerShell, перебирает стратегии 1→4
-- **[1–4]** Ручной запуск стратегии — winws блокирует выполнение bat до Ctrl+C
-- **[5]** Диагностика сети (nslookup, ping, tracert)
-- **[6]** Смена DNS на Cloudflare 1.1.1.1
+- **[A]** Auto-select: launches winws in background (`start /b`), tests TLS connection to `loginserver.live.albion.zone:443` via PowerShell, tries strategies 1→4
+- **[1–4]** Manual strategy launch — winws blocks bat execution until Ctrl+C
+- **[5]** Network diagnostics (nslookup, ping, tracert)
+- **[6]** Switch DNS to Cloudflare 1.1.1.1
 
-Последняя выбранная стратегия сохраняется в `lists/settings.ini`.
-
----
-
-## Стратегии winws
-
-| # | Параметры | Назначение |
-|---|-----------|-----------|
-| 1 | fake + split2 | Мягкая, большинство провайдеров |
-| 2 | fake + multidisorder | Средняя |
-| 3 | multisplit + seqovl | Агрессивная (Ростелеком и аналоги) |
-| 4 | fake + multidisorder без hostlist | Полный обход всего HTTPS |
-
-Стратегии 1–3 применяются только к доменам из `lists/albion-hosts.txt`.
+Last selected strategy is saved to `lists/settings.ini`.
 
 ---
 
-## Важные ограничения
+## winws Strategies
 
-- **Не публиковать порты** и не добавлять сетевые сервисы — это клиентский инструмент
-- **Не усложнять** — целевой пользователь не технический, UX важен
-- **Бинари в `bin/`** не трогать — они из оригинального zapret-win-bundle
-- **`lists/`** в `.gitignore` — генерируется локально при запуске
+| # | Parameters | Purpose |
+|---|------------|---------|
+| 1 | fake + split2 | Soft, most ISPs |
+| 2 | fake + multidisorder | Medium |
+| 3 | multisplit + seqovl | Aggressive (Rostelecom-like DPI) |
+| 4 | fake + multidisorder, no hostlist | Full HTTPS bypass |
+
+Strategies 1–3 apply only to domains from `lists/albion-hosts.txt`.
 
 ---
 
-## Релизы
+## Important Constraints
 
-При пуше тега `vX.Y` GitHub Actions автоматически создаёт релиз с ZIP-архивом (`.github/workflows/release.yml`). ZIP исключает `.git`, `.github`, `.claude`, `lists/albion-hosts.txt`, `lists/settings.ini`.
+- **Do not add server selection** (Americas/Europe/Asia) — all domains are already included in the hostlist
+- **Do not auto-change DNS in [A] mode** — user does this explicitly via [6]
+- **Do not touch `bin/`** — binaries come from the original zapret-win-bundle
+- **`lists/` is in `.gitignore`** — generated locally at runtime
+- **Keep it simple** — target users are non-technical, UX matters
+- **Do not add blockcheck, cygwin** or other tools from the original fork — the project is intentionally simplified
+- **Keep `arm64/` and `win7/`** — needed for non-standard configurations
 
-Создать релиз:
+---
+
+## Releases
+
+Pushing a tag `vX.Y` triggers GitHub Actions to create a release with a ZIP archive (`.github/workflows/release.yml`). The ZIP excludes `.git`, `.github`, `.claude`, `lists/albion-hosts.txt`, `lists/settings.ini`.
+
 ```
 git tag v1.1
 git push origin v1.1
@@ -74,9 +76,8 @@ git push origin v1.1
 
 ---
 
-## Чего не делать
+## Commit Convention
 
-- Не добавлять выбор сервера (Americas/Europe/Asia) — все домены уже включены в hostlist
-- Не менять DNS автоматически в режиме [A] — пользователь делает это явно через [6]
-- Не удалять `arm64/` и `win7/` — нужны для нестандартных конфигураций
-- Не добавлять blockcheck, cygwin и другие инструменты из оригинального форка — проект намеренно упрощён
+All commits must be in English. Format: `type: short description`
+
+Types: `feat`, `fix`, `refactor`, `docs`, `chore`
