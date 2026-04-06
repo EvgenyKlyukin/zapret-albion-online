@@ -384,11 +384,12 @@ goto MENU
 echo.
 echo  %C_CYAN%── Set DNS to Cloudflare 1.1.1.1 ──%C_RESET%
 echo.
-for /f "tokens=1* delims=:" %%a in ('netsh interface show interface ^| findstr /i "Connected подключен"') do (
-    for /f "tokens=4" %%c in ("%%b") do set "ADAPTER=%%c"
-)
+for /f "usebackq delims=" %%a in (`powershell -NoProfile -Command "(Get-NetAdapter | Where-Object {$_.Status -eq 'Up' -and $_.Virtual -eq $false} | Sort-Object -Property Speed -Descending | Select-Object -First 1).Name" 2^>nul`) do set "ADAPTER=%%a"
 if not defined ADAPTER (
     echo  Could not detect active adapter automatically.
+    echo  Available adapters:
+    netsh interface show interface | findstr /i "Connected"
+    echo.
     set /p "ADAPTER=  Enter adapter name (e.g. Ethernet, Wi-Fi): "
 )
 echo  Adapter: %ADAPTER%
