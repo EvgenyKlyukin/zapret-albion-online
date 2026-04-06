@@ -13,11 +13,12 @@ set "HOSTLIST=%ROOT%lists\albion-hosts.txt"
 set "SETTINGS=%ROOT%lists\settings.ini"
 
 :: --- Colors ---
-set "C_GREEN=[32m"
-set "C_YELLOW=[33m"
-set "C_RED=[31m"
-set "C_CYAN=[36m"
-set "C_RESET=[0m"
+for /f %%a in ('echo prompt $E^| cmd /q') do set "ESC=%%a"
+set "C_GREEN=%ESC%[32m"
+set "C_YELLOW=%ESC%[33m"
+set "C_RED=%ESC%[31m"
+set "C_CYAN=%ESC%[36m"
+set "C_RESET=%ESC%[0m"
 
 :: --- Test host for auto-select ---
 set "TEST_HOST=loginserver.live.albion.zone"
